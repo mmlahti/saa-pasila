@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yr.no Sää: Pasila</title>
+    <style>
+        body {
+            background-color: #ffffff;
+            color: #000000;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        h2 {
+            font-size: 36px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 4px solid #000000;
+            padding-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        .day-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #000000;
+        }
+        .day-row:last-child {
+            border-bottom: none;
+        }
+        .day-name {
+            font-weight: bold;
+            font-size: 32px;
+            min-width: 140px;
+            text-transform: capitalize;
+        }
+        .weather-icon {
+            font-size: 38px;
+            min-width: 60px;
+            text-align: center;
+        }
+        .weather-desc {
+            font-size: 28px;
+            flex-grow: 1;
+            padding-left: 10px;
+        }
+        .temps {
+            font-weight: bold;
+            font-size: 32px;
+            text-align: right;
+            white-space: nowrap;
+        }
+        /* E-inkillä ei kannata käyttää harmaata, joten erotellaan min/max tekstillä ja koolla */
+        .min-temp {
+            font-size: 24px;
+            font-weight: normal;
+        }
+        .error {
+            font-size: 24px;
+            font-weight: bold;
+            border: 4px solid #000000;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Sää: Pasila</h2>
+    <div id="weather-data">Ladataan ennustetta...</div>
+
+    <script>
+        // Pasilan koordinaatit
+        const LAT = 60.1983;
+        const LON = 24.9333;
+
+        // Open-Meteo API, joka käyttää MET Norwayn (Yr.no) säämallia
+        const API_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe%2FHelsinki&models=metno_nordic`;
+
+        // Apufunktio: Muuttaa sääkoodit selkokieleksi ja e-ink-yhteensopivaksi emojiksi
+        function getWeatherInfo(code) {
+            if (code === 0) return { icon: '☀️', text: 'Selkeää' };
+            if (code === 1 || code === 2) return { icon: '🌤️', text: 'Puolipilvistä' };
+            if (code === 3) return { icon: '☁️', text: 'Pilvistä' };
+            if (code === 45 || code === 48) return { icon: '🌫️', text: 'Sumua' };
+            if (code >= 51 && code <= 55) return { icon: '🌧️', text: 'Tihkusadetta' };
+            if (code >= 61 && code <= 67) return { icon: '🌧️', text: 'Sadetta' };
+            if (code >= 71 && code <= 77) return { icon: '❄️', text: 'Lumisadetta' };
+            if (code >= 80 && code <= 82) return { icon: '🌧️', text: 'Kuuroja' };
+            if (code >= 85 && code <= 86) return { icon: '❄️', text: 'Lumikuuroja' };
+            if (code >= 95) return { icon: '⛈️', text: 'Ukkosta' };
+            return { icon: '☁️', text: 'Vaihtelevaa' };
+        }
+
+        // Apufunktio: Hakee päivän nimen (Tänään, Huomenna tai viikonpäivä)
+        function getDayName(dateString, index) {
+            if (index === 0) return "Tänään";
+            if (index === 1) return "Huomenna";
+            
+            const days = ["Su", "Ma", "Ti", "Ke", "To", "Pe", "La"];
+            const date = new Date(dateString);
+            return days[date.getDay()];
+        }
+
+        async function fetchWeather() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Virhe haettaessa säätietoja');
+                
+                const data = await response.json();
+                const daily = data.daily;
+                const container = document.getElementById('weather-data');
+                
+                container.innerHTML = '';
+
+                // Näytetään 3 seuraavaa päivää (indeksit 0, 1, 2)
+                for (let i = 0; i < 3; i++) {
+                    const dateStr = daily.time[i];
+                    const maxTemp = Math.round(daily.temperature_2m_max[i]);
+                    const minTemp = Math.round(daily.temperature_2m_min[i]);
+                    const weatherInfo = getWeatherInfo(daily.weather_code[i]);
+                    
+                    const dayName = getDayName(dateStr, i);
+
+                    const rowHtml = `
+                        <div class="day-row">
+                            <div class="day-name">${dayName}</div>
+                            <div class="weather-icon">${weatherInfo.icon}</div>
+                            <div class="weather-desc">${weatherInfo.text}</div>
+                            <div class="temps">
+                                ${maxTemp}° <span class="min-temp">(${minTemp}°)</span>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += rowHtml;
+                }
+
+            } catch (error) {
+                document.getElementById('weather-data').innerHTML = `
+                    <div class="error">Säätietoja ei voitu ladata.<br>${error.message}</div>
+                `;
+            }
+        }
+
+        // Suorita haku heti ja päivitä tiedot kerran tunnissa (3 600 000 ms)
+        fetchWeather();
+        setInterval(fetchWeather, 3600000);
+    </script>
+</body>
+</html>
