@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sää Pasilassa</title>
+    <title>Sää: Pasila</title>
     <style>
         body {
             background-color: #ffffff;
@@ -82,7 +82,7 @@
         const LAT = 60.1983;
         const LON = 24.9333;
 
-        // UUDISTETTU API-URL: lisätty wind_speed_10m_max sekä wind_speed_unit=ms
+        // API URL sisältää tarkan metno_nordic -mallin
         const API_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max&wind_speed_unit=ms&timezone=Europe%2FHelsinki&models=metno_nordic`;
 
         function getWeatherInfo(code) {
@@ -119,16 +119,16 @@
                 
                 container.innerHTML = '';
 
-                for (let i = 0; i < 3; i++) {
+                // TÄTÄ ON MUUTETTU: Loopataan vain 2 ensimmäistä päivää (i < 2)
+                for (let i = 0; i < 2; i++) {
                     const dateStr = daily.time[i];
                     const maxTemp = Math.round(daily.temperature_2m_max[i]);
                     const minTemp = Math.round(daily.temperature_2m_min[i]);
-                    const windSpeed = Math.round(daily.wind_speed_10m_max[i]); // Haetaan tuulen nopeus
+                    const windSpeed = Math.round(daily.wind_speed_10m_max[i]);
                     const weatherInfo = getWeatherInfo(daily.weather_code[i]);
                     
                     const dayName = getDayName(dateStr, i);
 
-                    // HTML-rakennetta päivitetty: sääkuvaus ja tuuli on paketoitu weather-info -divin sisään
                     const rowHtml = `
                         <div class="day-row">
                             <div class="day-name">${dayName}</div>
